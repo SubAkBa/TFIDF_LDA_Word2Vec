@@ -7,6 +7,7 @@ library(stringr)
 
 rm(list = ls()); gc(reset = T)
 
+# 네이버 뉴스 : 디지털 데일리
 main_url <- paste0("https://news.naver.com/main/read.nhn?mode=LPOD&mid=sec&oid=138&aid=000")
 article_num <- 2070040
 article_num <- 2058527
@@ -38,3 +39,59 @@ View(digit_daily_articles)
 # 2058528 - 2035653 = 22875
 write.csv(digit_daily_articles, "Digital_Daily.csv", row.names = F)
 
+
+
+# 네이버 지식백과 : 두산백과
+main_url <- paste0("https://terms.naver.com/list.nhn?cid=40942&categoryId=40942")
+part_url <- "https://terms.naver.com"
+page_url <- "&page="
+# subject_idx <- 1; page_idx <- 1; dict_idx <- 1
+subject_idx <- 2; page_idx <- 468; dict_idx <- 2
+
+dictionary <- data.frame()
+subject_part <- read_html(main_url) %>% html_nodes(".subject_item a")
+subject_list <- subject_part %>% html_attr("href")
+subject_name <- subject_part %>% html_text()
+
+for(subject_idx in 1 : length(subject_list)){
+  part_page_url <- paste0(part_url, subject_list[subject_idx], page_url)
+  page_idx <- 1
+  
+  while((prev_page <- read_html(paste0(part_page_url, page_idx)) %>% 
+         html_nodes(".content_list .subject a:first-child") %>% html_attr("href"))[1] 
+        != 
+        (next_page <- read_html(paste0(part_page_url, page_idx + 1)) %>% 
+         html_nodes(".content_list .subject a:first-child") %>% html_attr("href"))[1]){
+    dict_list <- prev_page
+    
+    for(dict_idx in 1 : length(dict_list)){
+      dict_main <- read_html(paste0(part_url, dict_list[dict_idx])) %>% html_node("#content")
+      
+      title <- dict_main %>% html_node(".headword_title h2") %>% html_text()
+      sub_name <- subject_name[subject_idx]
+      content_bag <- gsub("[\n|\t]", "", dict_main %>% html_nodes("#size_ct .txt") %>% html_text() %>% trimws())
+      content <- c()
+      for(content_idx in 1 : length(content_bag))
+        content <- paste(content, content_bag[content_idx]) %>% trim()
+        
+      dict_temp <- data.frame(title, sub_name, content)
+      dictionary <- rbind(dictionary, dict_temp)
+      
+      print(paste0("subject : ", subject_idx, " / page_idx : ", page_idx, " / dict_idx : ", dict_idx))
+    }
+    
+    page_idx <- page_idx + 1
+  }
+}
+# subject = 2 / page_idx = 468 / dict_idx = 1
+dictionary_philosophy <- dictionary %>% filter(sub_name == "철학")
+write.csv(dictionary_philosophy, "Dictionary_Philosophy.csv", row.names = F)
+dictionary <- setdiff(dictionary, dictionary_philosophy)
+write.csv(dictionary, "Dictionary_Religion.csv", row.names = F)
+
+# subject = 2 / page_idx = 623 / dict_idx = 15
+dictionary_religion <- read.csv("Dictionary_Religion.csv", stringsAsFactors = F)
+dictionary_religion <- rbind(dictionary_religion, dictionary)
+write.csv(dictionary_religion, "Dictionary_Religion.csv", row.names = F)
+
+# subject = 3부터 실행해야됨.
