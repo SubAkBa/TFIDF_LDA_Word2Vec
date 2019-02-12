@@ -9,8 +9,10 @@ rm(list = ls()); gc(reset = T)
 
 main_url <- paste0("https://news.naver.com/main/read.nhn?mode=LPOD&mid=sec&oid=138&aid=000")
 article_num <- 2070040
+article_num <- 2058527
 
 digit_daily_articles <- data.frame()
+digit_daily_articles <- read.csv("Digital_Daily.csv", stringsAsFactors = F)
 
 # 16년도 ~ 현재 까지 (디지털 데일리)
 while(article_num >= 2035653){
@@ -33,5 +35,6 @@ while(article_num >= 2035653){
 }
 View(digit_daily_articles)
 
-#  - 2035653 = 22875
+# 2058528 - 2035653 = 22875
 write.csv(digit_daily_articles, "Digital_Daily.csv", row.names = F)
+
