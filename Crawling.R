@@ -46,7 +46,8 @@ main_url <- paste0("https://terms.naver.com/list.nhn?cid=40942&categoryId=40942"
 part_url <- "https://terms.naver.com"
 page_url <- "&page="
 # subject_idx <- 1; page_idx <- 1; dict_idx <- 1
-subject_idx <- 2; page_idx <- 468; dict_idx <- 2
+# subject_idx <- 2; page_idx <- 468; dict_idx <- 2
+subject_idx <- 6; page_idx <- 301; dict_idx <- 11
 
 dictionary <- data.frame()
 subject_part <- read_html(main_url) %>% html_nodes(".subject_item a")
@@ -94,4 +95,24 @@ dictionary_religion <- read.csv("Dictionary_Religion.csv", stringsAsFactors = F)
 dictionary_religion <- rbind(dictionary_religion, dictionary)
 write.csv(dictionary_religion, "Dictionary_Religion.csv", row.names = F)
 
-# subject = 3부터 실행해야됨.
+# subject = 6 / page_idx = 301 / dict_idx = 10
+dictionary_group <- split(dictionary, dictionary$sub_name)
+dictionary_socialscience <- dictionary_group$사회과학
+write.csv(dictionary_socialscience, "Dictionary_SocialScience.csv", row.names = F)
+dictionary_ecobusi <- dictionary_group$`경제·경영`
+write.csv(dictionary_ecobusi, "Dictionary_EconomicsBusiness.csv", row.names = F)
+dictionary_travel <- dictionary_group$여행
+write.csv(dictionary_travel, "Dictionary_Travel.csv", row.names = F)
+dictionary_sport <- dictionary_group$스포츠
+write.csv(dictionary_sport, "Dictionary_Sport.csv", row.names = F)
+
+# Rbind sport data(Dictionary_Sport 끝부분 2개가 중복)
+dictionary_sport <- read.csv("Dictionary_Sport.csv", stringsAsFactors = F)
+dictionary_sport <- dictionary_sport[1 : 4509, ]
+dictionary_sport <- rbind(dictionary_sport, dictionary)
+write.csv(dictionary_sport, "Dictionary_Sport.csv", row.names = F)
+
+# subject = 7 / page_idx = 999 / dict_idx = 15
+dictionary_life <- dictionary
+write.csv(dictionary_life, "Dictionary_Life.csv", row.names = F)
+tail(dictionary_life, 2) # 샤코티스 / 상마연
