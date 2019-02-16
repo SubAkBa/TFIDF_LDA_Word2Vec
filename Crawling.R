@@ -48,7 +48,8 @@ page_url <- "&page="
 # subject_idx <- 1; page_idx <- 1; dict_idx <- 1
 # subject_idx <- 2; page_idx <- 468; dict_idx <- 2
 # subject_idx <- 6; page_idx <- 301; dict_idx <- 11
-subject_idx <- 7; page_idx <- 1000; dict_idx <- 1
+# subject_idx <- 7; page_idx <- 1000; dict_idx <- 1
+subject_idx = 10; page_idx <- 241; dict_idx <- 15
 
 dictionary <- data.frame()
 subject_part <- read_html(main_url) %>% html_nodes(".subject_item a")
@@ -138,3 +139,9 @@ write.csv(dictionary_dessci, "Dictionary_DescriptiveScience.csv", row.names = F)
 dictionary_tracom <- dictionary_group$`교통·통신`
 write.csv(dictionary_tracom, "Dictionary_TrafficCommunication.csv", row.names = F)
 
+# subject = 10 완료
+dictionary_dessci <- read.csv("Dictionary_DescriptiveScience.csv", stringsAsFactors = F)
+dictionary_dessci <- rbind(dictionary_dessci, dictionary)
+write.csv(dictionary_dessci, "Dictionary_DescriptiveScience.csv", row.names = F)
+
+# subject = 11 부터 실행
