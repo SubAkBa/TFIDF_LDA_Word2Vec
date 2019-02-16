@@ -47,7 +47,8 @@ part_url <- "https://terms.naver.com"
 page_url <- "&page="
 # subject_idx <- 1; page_idx <- 1; dict_idx <- 1
 # subject_idx <- 2; page_idx <- 468; dict_idx <- 2
-subject_idx <- 6; page_idx <- 301; dict_idx <- 11
+# subject_idx <- 6; page_idx <- 301; dict_idx <- 11
+subject_idx <- 7; page_idx <- 1000; dict_idx <- 1
 
 dictionary <- data.frame()
 subject_part <- read_html(main_url) %>% html_nodes(".subject_item a")
@@ -112,10 +113,17 @@ dictionary_sport <- dictionary_sport[1 : 4509, ]
 dictionary_sport <- rbind(dictionary_sport, dictionary)
 write.csv(dictionary_sport, "Dictionary_Sport.csv", row.names = F)
 
-# subject = 7 / page_idx = 999 / dict_idx = 15 <- 마무리 해야함
+# subject = 7 / page_idx = 999 / dict_idx = 15
 dictionary_life <- dictionary
 write.csv(dictionary_life, "Dictionary_Life.csv", row.names = F)
-tail(dictionary_life, 2) # 샤코티스 / 상마연
+tail(dictionary_life, 5) # 샤코티스 / 상마연
+head(dictionary, 2) # 나이탕 / 타워시 빌리지 페스티벌
+dictionary_life <- read.csv("Dictionary_Life.csv", stringsAsFactors = F)
+dictionary_life <- rbind(dictionary_life, dictionary)
+NROW(unique(dictionary_life$title)) # 16291 - 16073 = 218 중복 / why?) 조금씩 다르게 설명되있다.
+dictionary_life %>% group_by(title) %>% summarise(n = n()) %>% filter(n >= 2) %>% tail()
+                                        # 호공 / 홉 팜 페스티벌 / 화장 / 화쥐안 / 화채 / 흐엉 사원 축제
+write.csv(dictionary_life, "Dictionary_Life.csv", row.names = F)
 
 # subject = 8부터 시작(02.15)
 write.csv(dictionary, "dictionary_data.csv", row.names = F)
@@ -129,3 +137,4 @@ dictionary_dessci <- dictionary_group$기술과학
 write.csv(dictionary_dessci, "Dictionary_DescriptiveScience.csv", row.names = F)
 dictionary_tracom <- dictionary_group$`교통·통신`
 write.csv(dictionary_tracom, "Dictionary_TrafficCommunication.csv", row.names = F)
+
