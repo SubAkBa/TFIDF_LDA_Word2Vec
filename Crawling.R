@@ -117,5 +117,15 @@ dictionary_life <- dictionary
 write.csv(dictionary_life, "Dictionary_Life.csv", row.names = F)
 tail(dictionary_life, 2) # 샤코티스 / 상마연
 
-# subject = 8부터 시작(02.15) , subject = 10 / page_idx = 240 / dict_idx = 15
+# subject = 8부터 시작(02.15)
 write.csv(dictionary, "dictionary_data.csv", row.names = F)
+
+# subject = 10 / page_idx = 240 / dict_idx = 15
+dictionary_group <- read.csv("dictionary_data.csv", stringsAsFactors = F)
+dictionary_group <- split(dictionary_group, dictionary_group$sub_name)
+dictionary_purescience <- dictionary_group$순수과학
+write.csv(dictionary_purescience, "Dictionary_PureScience.csv", row.names = F)
+dictionary_dessci <- dictionary_group$기술과학
+write.csv(dictionary_dessci, "Dictionary_DescriptiveScience.csv", row.names = F)
+dictionary_tracom <- dictionary_group$`교통·통신`
+write.csv(dictionary_tracom, "Dictionary_TrafficCommunication.csv", row.names = F)
