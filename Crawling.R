@@ -112,7 +112,10 @@ dictionary_sport <- dictionary_sport[1 : 4509, ]
 dictionary_sport <- rbind(dictionary_sport, dictionary)
 write.csv(dictionary_sport, "Dictionary_Sport.csv", row.names = F)
 
-# subject = 7 / page_idx = 999 / dict_idx = 15
+# subject = 7 / page_idx = 999 / dict_idx = 15 <- 마무리 해야함
 dictionary_life <- dictionary
 write.csv(dictionary_life, "Dictionary_Life.csv", row.names = F)
 tail(dictionary_life, 2) # 샤코티스 / 상마연
+
+# subject = 8부터 시작(02.15) , subject = 10 / page_idx = 240 / dict_idx = 15
+write.csv(dictionary, "dictionary_data.csv", row.names = F)
