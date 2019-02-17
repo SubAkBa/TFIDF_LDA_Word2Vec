@@ -144,4 +144,5 @@ dictionary_dessci <- read.csv("Dictionary_DescriptiveScience.csv", stringsAsFact
 dictionary_dessci <- rbind(dictionary_dessci, dictionary)
 write.csv(dictionary_dessci, "Dictionary_DescriptiveScience.csv", row.names = F)
 
-# subject = 11 부터 실행
+# subject = 11 부터 실행, subject = 11 / page_idx = 498 / dict_idx = 15
+write.csv(dictionary, "Dictionary_Animal.csv", row.names = F)
