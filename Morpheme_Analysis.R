@@ -2,12 +2,18 @@ install.packages("KoNLP", dependencies = T)
 install.packages("digest")
 install.packages("rlang")
 install.packages("stringi")
+install_github("NamyounKim/NLP4kec")
+install.packages("rJava")
+install.packages("D:/Analysis_Data/TFIDF_LDA_Word2Vec/NLP4kec_1.2.0.zip", repos = NULL)
 
 library(KoNLP)
 library(rlang)
 library(digest)
 library(stringi)
 library(tm)
+library(devtools)
+library(rJava)
+library(NLP4kec)
 
 # KoNLP Library : https://github.com/haven-jeon/KoNLP/blob/master/etcs/KoNLP-API.md
 
@@ -18,6 +24,7 @@ sentence <- "아버지가 방에 스르륵 들어가신다."
 
 # extractNoun() : 명사 추출
 extractNoun(sentence)
+extractNoun(dd$abody[1 : 5])
 
 # mergeUserDic() : 사전에 단어를 추가
 # '스르륵'은 명사가 아닌 부사
@@ -79,3 +86,32 @@ dtm_test # Non- / sparse entries : 0이 아닌 셀의 수 / 0인 셀의 수
          # Sparsity : 전체 셀 수에서 0인 셀의 비율
          # Maximal term length : 가장 긴 단어의 길이
          # Weighting : 가중치 종류 tf / tfidf
+
+# library(NLP4kec)
+# 읽어오기 위해서는 column name이 id / content로 되어 있어야 한다.
+dd <- read.csv("Digital_Daily.csv", stringsAsFactors = F)
+colnames(dd)[c(1, 5)] <- c("id", "content")
+dd[, c(2 : 4)] <- NULL
+dd$ID <- paste0("D", dd$ID)
+write.csv(dd, "Digital_Daily_NLP4kec.csv", row.names = F)
+
+result <- file_parser_r(path = "Digital_Daily_NLP4kec.csv", language = "ko") # 분석이 되지 않음.
+
+dd <- read.csv("Digital_Daily_NLP4kec.csv", stringsAsFactors = F)
+result <- r_parser_r(dd$content[1 : 5], language = "ko")
+result <- gsub(" ","  ", result) # 단어 간 띄어쓰기 하나 더추가(윈도우만)
+
+corp <- VCorpus(VectorSource(result)) # Corpus 생성
+corp <- tm_map(corp, removePunctuation) # 특수문자 제거
+
+# Document Term Matrix 생성
+dtm <- DocumentTermMatrix(corp, control = list(removeNumbers = FALSE, wordLengths = c(2, Inf))) 
+
+# 단어 양옆 스페이스 제거 및 한글자 단어 제외하기
+colnames(dtm) <- trimws(colnames(dtm))  # 윈도우에서 돌리는 경우에만 적용
+dtm <- dtm[, nchar(colnames(dtm)) > 1]
+
+# 연관 키워드 구하기
+findAssocs(dtm, terms = "데이터", corlimit = 0.2)
+
+# 사용자 사전 적용해서 형태소 분석 할 것. korDicPath = "" / dictionary.txt (한줄 한줄 마다 단어 배치)
