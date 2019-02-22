@@ -10,10 +10,11 @@ library(KoNLP)
 library(rlang)
 library(digest)
 library(stringi)
-library(tm)
 library(devtools)
+library(tm)
 library(rJava)
 library(NLP4kec)
+library(dplyr)
 
 # KoNLP Library : https://github.com/haven-jeon/KoNLP/blob/master/etcs/KoNLP-API.md
 
@@ -115,3 +116,21 @@ dtm <- dtm[, nchar(colnames(dtm)) > 1]
 findAssocs(dtm, terms = "데이터", corlimit = 0.2)
 
 # 사용자 사전 적용해서 형태소 분석 할 것. korDicPath = "" / dictionary.txt (한줄 한줄 마다 단어 배치)
+corpus <- r_parser_r(dd$content[1], language = "ko", useEn = T, korDicPath = "mydictionary.txt")
+corpus <- gsub(" ", "  ", corpus); corpus
+
+table(is.na(dd$content)) # NA 제거
+dd <- dd %>% filter(!is.na(content))
+write.csv(dd, "Digital_Daily_NLP4kec_rmNA.csv", row.names = F)
+dd <- read.csv("Digital_Daily_NLP4kec_rmNA.csv", stringsAsFactors = F)
+result <- r_parser_r(dd$content[1 : 100], language = "ko", korDicPath = "mydictionary.txt")
+article_100 <- data.frame(content = dd$content[1 : 100], parser = result)
+article_100[24, ]
+
+# index 29부터
+index <- 25
+
+result <- r_parser_r(dd$content[index], language = "ko", useEn = T, korDicPath = "mydictionary.txt")
+article_100 <- data.frame(content = dd$content[index], parser = result)
+article_100
+index <- index + 1 # 수치 / 수 치다
