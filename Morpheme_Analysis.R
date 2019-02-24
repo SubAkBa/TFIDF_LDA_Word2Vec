@@ -5,6 +5,10 @@ install.packages("stringi")
 install_github("NamyounKim/NLP4kec")
 install.packages("rJava")
 install.packages("D:/Analysis_Data/TFIDF_LDA_Word2Vec/NLP4kec_1.2.0.zip", repos = NULL)
+install.packages("network")
+install.packages("sna")
+install.packages("GGally")
+install.packages("qgraph")
 
 library(KoNLP)
 library(rlang)
@@ -16,7 +20,18 @@ library(rJava)
 library(NLP4kec)
 library(dplyr)
 
+library(igraph)
+library(network)
+library(sna)
+library(ggplot2)
+library(GGally)
+
+library(qgraph)
+
+rm(list = ls()); gc(reset = T)
+
 # KoNLP Library : https://github.com/haven-jeon/KoNLP/blob/master/etcs/KoNLP-API.md
+# NLP4kec Library : https://github.com/NamyounKim/NLP4kec
 
 useSejongDic() # 형태소 분석 하기 위해서는 reference로 삼을 사전이 필요하다.
                # 시스템(system) / 세종(sejong) 사전이 있다.
@@ -127,10 +142,68 @@ result <- r_parser_r(dd$content[1 : 100], language = "ko", korDicPath = "mydicti
 article_100 <- data.frame(content = dd$content[1 : 100], parser = result)
 article_100[24, ]
 
-# index 29부터
-index <- 25
+# index 37까지 확인
+index <- 29
 
 result <- r_parser_r(dd$content[index], language = "ko", useEn = T, korDicPath = "mydictionary.txt")
 article_100 <- data.frame(content = dd$content[index], parser = result)
 article_100
-index <- index + 1 # 수치 / 수 치다
+index <- index + 1
+
+# Document Term Matrix 생성
+parser1 <- r_parser_r(dd$content, language = "ko", useEn = T, korDicPath = "mydictionary.txt")
+parser1 <- gsub(" ", "  ", parser1)
+corpus1 <- VCorpus(VectorSource(parser1))
+corpus1 <- tm_map(corpus1, content_transformer(tolower)) # corpus[[index]] : Corpus 확인
+                           # tm_map(corpus, PlainTextDocument)
+dtm1 <- DocumentTermMatrix(corpus1,
+                           control = list(removePunctuation = T, removeNumbers = T, wordLengthes = c(2, Inf)))
+dtm1_sparse <- removeSparseTerms(dtm1, sparse = as.numeric(0.9))
+inspect(dtm1_sparse) # 전체 매트릭스 확인 : View(t(as.matrix(dtm)))
+findAssocs(dtm1_sparse, "글로벌", 0.2) # tf 가중치 사용 "글로벌" 연관 키워드 검색
+
+# 가중치를 tf -> tfidf로 변경해보기.
+dtm2 <- DocumentTermMatrix(corpus1, 
+                           control = list(removePunctuation = T, removeNumbers = T, wordLengths = c(2, Inf),
+                                          weighting = function(x) weightTfIdf(x, normalize = T)) )
+colnames(dtm2) <- trimws(colnames(dtm2))
+dtm2 <- dtm2[, nchar(colnames(dtm2)) > 1]
+dtm2_sparse <- removeSparseTerms(dtm2, sparse = as.numeric(0.95))
+inspect(dtm2_sparse)
+findAssocs(dtm2_sparse, "글로벌", 0.2) # tfidf 가중치 사용 "글로벌" 연관 키워드
+                                       # w(x,y) = tf(x, y) * log(N / df(x))
+                                       # tf(x, y) : y문서에 x단어의 빈도수
+                                       # df(x) : x단어가 포함된 문서수
+                                       # N : 총 문서수
+
+# 자주 출현하는 단어 찾기 : findFreqTerms(DTM, lowfreq = 0, hightfreq = Inf)
+findFreqTerms(dtm2, lowfreq = 2)
+
+# 연관 키워드 네트워크 맵
+# (1) Make Cor Matrix
+dtm2_matrix <- as.matrix(dtm2_sparse)
+cor_dtm <- cor(dtm2_matrix)
+cor_dtm[cor_dtm < 0.25] <- 0
+
+# (2) Construct Network
+net <- network(cor_dtm, directed = F)
+net %v% "mode" <- ifelse(betweenness(net) > mean(betweenness(net)), "big", "small")
+col <- c("small" = "grey", "big" = "gold")
+set.edge.value(net, "edgeSize", cor_dtm * 2)
+
+ggnet2(net, label = T, label.size = 3, color = "mode", palette = col, size = "degree", edge.size = "edgeSize",
+       family = "ApplyGothic")
+
+# library(qgraph) -> TermDocumentMatrix
+tdm1 <- TermDocumentMatrix(corpus1,
+                           control = list(removePunctuation = T, removeNumbers = T, wordLengths = c(2, Inf)))
+tdm1_mat <- as.matrix(tdm1)
+doc_count <- rowSums(tdm1_mat)
+doc_order <- order(doc_count, decreasing = T)
+freq_doc <- tdm1_mat[doc_order[1 : 30], ]
+
+co_matrix <- freq_doc %*% t(freq_doc)
+
+par(family = "Apple SD Gothic Neo")
+qgraph(co_matrix, labels = rownames(co_matrix), diag = F, layout = "spring", threshold = 3,
+       vsize = log(diag(co_matrix) * 2))
