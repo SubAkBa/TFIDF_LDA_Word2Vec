@@ -154,7 +154,7 @@ index <- index + 1
 parser1 <- r_parser_r(dd$content, language = "ko", useEn = T, korDicPath = "mydictionary.txt")
 parser1 <- gsub(" ", "  ", parser1)
 corpus1 <- VCorpus(VectorSource(parser1))
-corpus1 <- tm_map(corpus1, content_transformer(tolower)) # corpus[[index]] : Corpus 확인
+corpus1 <- tm_map(corpus1, content_transformer(tolower)) # corpus[[index]]$content : Corpus 확인
                            # tm_map(corpus, PlainTextDocument)
 dtm1 <- DocumentTermMatrix(corpus1,
                            control = list(removePunctuation = T, removeNumbers = T, wordLengthes = c(2, Inf)))
