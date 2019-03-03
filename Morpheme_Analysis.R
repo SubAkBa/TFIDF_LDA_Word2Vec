@@ -207,3 +207,25 @@ co_matrix <- freq_doc %*% t(freq_doc)
 par(family = "Apple SD Gothic Neo")
 qgraph(co_matrix, labels = rownames(co_matrix), diag = F, layout = "spring", threshold = 3,
        vsize = log(diag(co_matrix) * 2))
+
+
+# 두산 백과 TF / TF-IDF
+dic <- read.csv("Dictionary_Animal.csv", stringsAsFactors = F)
+dic_parsing <- r_parser_r(dic$content, useEn = T, language = "ko")
+dic_parsing <- gsub(" ", "  ", dic_parsing)
+dic_corpus <- VCorpus(VectorSource(dic_parsing))
+dic_corpus <- tm_map(dic_corpus, content_transformer(tolower))
+dic_dtm <- DocumentTermMatrix(dic_corpus, control = list(removePunctuation = T, removeNumbers = T,
+                                                         wordLengths = c(2, Inf)))
+dic_dtm <- removeSparseTerms(dic_dtm, sparse = as.numeric(0.9))
+findFreqTerms(dic_dtm, lowfreq = 15)
+inspect(dic_dtm)
+
+
+dic_dtm_tfidf <- DocumentTermMatrix(dic_corpus, control = list(removePunctuation = T, removeNumbers = T,
+                                                               wordLengths = c(2, Inf),
+                                                               weighting = function(x) weightTfIdf(x, normalize = T) ))
+dic_dtm_tfidf <- removeSparseTerms(dic_dtm_tfidf, sparse = as.numeric(0.9))
+inspect(dic_dtm_tfidf)
+findAssocs(dic_dtm_tfidf, "날개", 0.2)
+

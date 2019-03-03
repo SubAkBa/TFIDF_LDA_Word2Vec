@@ -56,3 +56,16 @@ beta_spread %>%
 # Document-topic probabilities
 documents <- tidy(lda, matrix = "gamma") # ex) 문서1내에서 topic1로 부터 52.3%만큼 단어들이 생성됐다.
 
+
+# 두산 백과
+rowtotal <- apply(dic_dtm, 1, sum)
+dic_dtm <- dic_dtm[rowtotal > 0, ]
+lda <- LDA(dic_dtm, k = 2, control = list(seed = 1234))
+
+# 단어-주제 확률
+dic_topic <- tidy(lda, matrix = "beta")
+top_terms <- dic_topic %>% group_by(topic) %>% 
+  top_n(10, beta) %>% ungroup() %>% arrange(topic, desc(beta))
+top_terms %>% ggplot(aes(x = reorder(term, beta), y = beta, fill = factor(topic))) + 
+  geom_col(show.legend = F) +
+  facet_wrap(~ topic, scales = "free") + coord_flip()
