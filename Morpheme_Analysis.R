@@ -28,6 +28,8 @@ library(GGally)
 
 library(qgraph)
 
+library(randomForest)
+
 rm(list = ls()); gc(reset = T)
 
 # KoNLP Library : https://github.com/haven-jeon/KoNLP/blob/master/etcs/KoNLP-API.md
@@ -210,10 +212,12 @@ qgraph(co_matrix, labels = rownames(co_matrix), diag = F, layout = "spring", thr
 
 
 # 두산 백과 TF / TF-IDF
+stopwords <- read.csv("Stopword.csv", stringsAsFactors = F)
 dic <- read.csv("Dictionary_Animal.csv", stringsAsFactors = F)
 dic_parsing <- r_parser_r(dic$content, useEn = T, language = "ko")
 dic_parsing <- gsub(" ", "  ", dic_parsing)
 dic_corpus <- VCorpus(VectorSource(dic_parsing))
+dic_corpus <- tm_map(dic_corpus, removeWords, stopwords$stopword)
 dic_corpus <- tm_map(dic_corpus, content_transformer(tolower))
 dic_dtm <- DocumentTermMatrix(dic_corpus, control = list(removePunctuation = T, removeNumbers = T,
                                                          wordLengths = c(2, Inf)))
@@ -229,3 +233,24 @@ dic_dtm_tfidf <- removeSparseTerms(dic_dtm_tfidf, sparse = as.numeric(0.9))
 inspect(dic_dtm_tfidf)
 findAssocs(dic_dtm_tfidf, "날개", 0.2)
 
+
+dic1 <- read.csv("Dictionary_Sport.csv", stringsAsFactors = F)
+dic1_parsing <- r_parser_r(dic$content, useEn = T, language = "ko")
+dic1_parsing <- gsub(" ", "  ", dic1_parsing)
+dic1_corpus <- VCorpus(VectorSource(dic1_parsing))
+dic1_corpus <- tm_map(dic1_corpus, removeWords, stopwords$stopword)
+dic1_corpus <- tm_map(dic1_corpus, content_transformer(tolower))
+dic1_dtm <- DocumentTermMatrix(dic1_corpus, control = list(removeNumbers = T, removePunctuation = T,
+                                                           wordLengths = c(2, Inf), 
+                                                           weighting = function(x) weightTfIdf(x, normalize = T) ))
+dic1_dtm <- removeSparseTerms(dic1_dtm, sparse = as.numeric(0.9))
+inspect(dic1_dtm)
+
+# 이런식으로 따로따로 DTM을 구해서는 안된다. 처음 파싱하기 전에 문서의 비율을 비슷하게 맞춘뒤
+# 데이터를 합치고 파싱을 시작해야한다.
+
+# Document Term Matrix를 데이터프레임으로 변환 -> 모델에 넣기 위해서
+df_tfidf <- as.data.frame(as.matrix(dic_dtm_tfidf))
+df1_tfidf <- as.data.frame(as.matrix(dic1_dtm))
+
+randomForest()
