@@ -8,6 +8,7 @@ library(NLP4kec)
 library(tm)
 library(tidytext)
 library(topicmodels)
+library(caret)
 
 rm(list = ls()); gc(reset = T)
 
@@ -69,3 +70,73 @@ top_terms <- dic_topic %>% group_by(topic) %>%
 top_terms %>% ggplot(aes(x = reorder(term, beta), y = beta, fill = factor(topic))) + 
   geom_col(show.legend = F) +
   facet_wrap(~ topic, scales = "free") + coord_flip()
+
+
+# 두산 백과 
+travel <- read.csv("Dictionary_Travel.csv", stringsAsFactors = F)
+sport <- read.csv("Dictionary_Sport.csv", stringsAsFactors = F)
+life <- read.csv("Dictionary_Life.csv", stringsAsFactors = F)
+stopwords <- read.csv("StopWord.csv", stringsAsFactors = F)
+
+# 7000개씩 뽑아서 사용
+travel <- travel[rownames(sample_n(travel, size = 7000)), ]
+travel$title <- NULL
+sport <- sport[rownames(sample_n(sport, size = 7000)), ]
+sport$title <- NULL
+life <- life[rownames(sample_n(life, size = 7000)), ]
+life$title <- NULL
+
+doosan_data <- data.frame()
+doosan_data <- rbind(doosan_data, travel, sport, life)
+
+parsing_doosan <- r_parser_r(doosan_data$content, useEn = T, language = "ko", korDicPath = "mydictionary.txt")
+parsing_doosan <- gsub(" ", "  ", parsing_doosan)
+corpus_doosan <- VCorpus(VectorSource(parsing_doosan))
+corpus_doosan <- tm_map(corpus_doosan, content_transformer(tolower))
+corpus_doosan <- tm_map(corpus_doosan, removeWords, stopwords$stopword)
+dtm_doosan <- DocumentTermMatrix(corpus_doosan, control = list(removePunctuation = T, removeNumbers = T,
+                                                               wordLengths = c(2, Inf)))
+dtm_doosan <- removeSparseTerms(dtm_doosan, sparse = as.numeric(0.98))
+
+rowtotal <- apply(dtm_doosan, 1, sum)
+dtm_doosan <- dtm_doosan[rowtotal > 0, ]
+
+dtm_doosan_tfidf <- DocumentTermMatrix(corpus_doosan, control = list(removePunctuation = T, removeNumbers = T,
+                                                                     wordLengths = c(2, Inf),
+                                                                     weighting = function(x) weightTfIdf(x) ))
+lda_doosan_tfidf <- LDA(dtm_doosan_tfidf, k = 3, control = list(seed = 1234))
+
+# 문서별 토픽번호 저장
+lda_doosan <- LDA(dtm_doosan, k = 3, control = list(seed = 1234))
+topic_doosan <- topics(lda_doosan, 1)
+topic_doosan_df <- as.data.frame(topic_doosan)
+topic_doosan_df$row <- as.numeric(row.names(topic_doosan_df))
+
+# 토픽별 핵심단어 저장
+term_topic_doosan <- terms(lda_doosan, 30)
+
+# 문서별 토픽확률값 저장
+doc_prob_doosan <- posterior(lda_doosan)$topics
+doc_prob_doosan_df <- as.data.frame(doc_prob_doosan)
+dim(doc_prob_doosan_df)
+
+doc_prob_doosan_df$maxprob <- apply(doc_prob_doosan_df, 1, max)
+
+# 문서별 토픽번호 및 확률값 출력
+doc_prob_doosan_df$row <- as.numeric(row.names(doc_prob_doosan_df))
+id_topic_doosan <- merge(topic_doosan_df, doc_prob_doosan_df, by = "row")
+
+label_df <- factor(c(rep("1", 7000), rep("2", 7000), rep("3", NROW(dtm_doosan) - 14000)))
+
+confusionMatrix(as.factor(id_topic_doosan$topic_doosan), label_df)
+
+# LDA Output 4가지 종류
+# 1. 토픽 별 핵심 단어 출력하기   : terms(lda, 30)
+# 2. 문서 별 토픽 번호 출력하기   : topics(lda, 1)
+# 3. 문서 별 토픽 확률값 출력하기 : posterior(lda)$topics
+# 4. 단어 별 토픽 확률값 출력하기 : posterior(lda)$terms
+
+# Q1 : topic이 내가 원하는 주제로 나누어지는가?
+# Q2 : tf-idf의 경우 단어의 무리들을 통해 레이블을 추측한다.
+#      but, lda의 경우 단어 1개가 토픽 1, 2, 3일경우 확률을 나타내준다.
+#      그렇다면 랜덤포레스트를 돌릴때 독립변수로 단어를 1개만 집어넣어야 하는가?

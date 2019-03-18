@@ -254,3 +254,9 @@ df_tfidf <- as.data.frame(as.matrix(dic_dtm_tfidf))
 df1_tfidf <- as.data.frame(as.matrix(dic1_dtm))
 
 randomForest()
+
+# DTM 구조 
+# 1. dtm$i : DTM의 행정보가 들어있다. 문서 ID
+# 2. dtm$j : DTM의 열정보가 들어있다. 단어의 열 index
+# 3. dtm$v : DTM의 셀정보가 들어있다. 문서 별 단어 빈도수
+# 4. dimnames(dtm)[2] : 실제 텍스트로 된 단어가 저장

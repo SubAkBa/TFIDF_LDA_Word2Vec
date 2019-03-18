@@ -5,6 +5,7 @@ output: html_document
 
 ```{r}
 library(tm)
+library(caret)
 library(NLP4kec)
 library(dplyr)
 library(plyr)
@@ -73,22 +74,30 @@ tfidf_test <- dtm_df_data[-as.numeric(tfidf_train_idx), ]
 #### RandomForest 돌려보기
 
 ```{r}
-tfidf_train_rf <- randomForest(label ~ ., tfidf_train, importance = T, do.trace = T, ntree = 300)
-print(tfidf_train_rf)
-plot(tfidf_train_rf)
+tfidf_model_rf <- randomForest(label ~ ., tfidf_train, importance = T, do.trace = T, ntree = 200)
+print(tfidf_model_rf)
+plot(tfidf_model_rf)
 ```
 
 #### 변수의 중요도
 
 ```{r}
-importance(tfidf_train_rf)
-varImpPlot(tfidf_train_rf)
+importance(tfidf_model_rf)
+varImpPlot(tfidf_model_rf)
 ```
 
-##### 예측
+#### train데이터 정확도
 
 ```{r}
-tfidf_predict_rf <- predict(tfidf_train_rf, newdata = tfidf_test, type = "class")
-confusionMatrix(tfidf_predict_rf, tfidf_test$label)
+tfidf_predict_rf_train <- predict(tfidf_model_rf, newdata = tfidf_train, type = "class")
+confusionMatrix(tfidf_predict_rf_train, tfidf_train$label)
+```
+
+
+#### 예측
+
+```{r}
+tfidf_predict_rf_test <- predict(tfidf_model_rf, newdata = tfidf_test, type = "class")
+confusionMatrix(tfidf_predict_rf_test, tfidf_test$label)
 ```
 
