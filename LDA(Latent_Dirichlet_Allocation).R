@@ -9,6 +9,7 @@ library(tm)
 library(tidytext)
 library(topicmodels)
 library(caret)
+library(randomForest)
 
 rm(list = ls()); gc(reset = T)
 
@@ -107,7 +108,8 @@ dtm_doosan_tfidf <- DocumentTermMatrix(corpus_doosan, control = list(removePunct
 lda_doosan_tfidf <- LDA(dtm_doosan_tfidf, k = 3, control = list(seed = 1234))
 
 # 문서별 토픽번호 저장
-lda_doosan <- LDA(dtm_doosan, k = 3, control = list(seed = 1234))
+lda_doosan <- LDA(dtm_doosan, k = 10, control = list(seed = 1234))
+lda_doosan <- LDA(dtm_doosan, k = 20, control = list(seed = 1234))
 topic_doosan <- topics(lda_doosan, 1)
 topic_doosan_df <- as.data.frame(topic_doosan)
 topic_doosan_df$row <- as.numeric(row.names(topic_doosan_df))
@@ -118,7 +120,6 @@ term_topic_doosan <- terms(lda_doosan, 30)
 # 문서별 토픽확률값 저장
 doc_prob_doosan <- posterior(lda_doosan)$topics
 doc_prob_doosan_df <- as.data.frame(doc_prob_doosan)
-dim(doc_prob_doosan_df)
 
 doc_prob_doosan_df$maxprob <- apply(doc_prob_doosan_df, 1, max)
 
@@ -126,17 +127,34 @@ doc_prob_doosan_df$maxprob <- apply(doc_prob_doosan_df, 1, max)
 doc_prob_doosan_df$row <- as.numeric(row.names(doc_prob_doosan_df))
 id_topic_doosan <- merge(topic_doosan_df, doc_prob_doosan_df, by = "row")
 
-label_df <- factor(c(rep("1", 7000), rep("2", 7000), rep("3", NROW(dtm_doosan) - 14000)))
+label_df <- factor(c(rep("1", 7000), rep("2", 7000), rep("3", NROW(doc_prob_doosan_df) - 14000)))
+doc_prob_doosan_df$label <- label_df
 
-confusionMatrix(as.factor(id_topic_doosan$topic_doosan), label_df)
+colnames(doc_prob_doosan_df)[1 : 10] <- paste0("topic", colnames(doc_prob_doosan_df)[1 : 10])
+
+# train / test로 나누기 - 70% / 30%
+set.seed(1337)
+lda_train <- data.frame()
+lda_train_idx <- c()
+idx <- c(0, 7000, 14000, nrow(doc_prob_doosan_df))
+for(i in 1 : 3){
+  lda_train_idx <- c(lda_train_idx, rownames(sample_frac(doc_prob_doosan_df[(idx[i] + 1) : idx[i + 1], ], 0.7)))
+}
+lda_train <- doc_prob_doosan_df[lda_train_idx, ]
+lda_test <- doc_prob_doosan_df[-as.numeric(lda_train_idx), ]
+
+# RandomForest
+rf_lda_train <- randomForest(label ~ ., lda_train, importance = T, do.trace = T, ntree = 200)
+
+print(rf_lda_train)
+plot(rf_lda_train)
+varImpPlot(rf_lda_train)
+
+rf_lda_pred <- predict(rf_lda_train, newdata = lda_test, type = "class")
+confusionMatrix(rf_lda_pred, lda_test$label) # topic 10개 - Accuracy : 0.9693 topic 20개 - ?
 
 # LDA Output 4가지 종류
 # 1. 토픽 별 핵심 단어 출력하기   : terms(lda, 30)
 # 2. 문서 별 토픽 번호 출력하기   : topics(lda, 1)
 # 3. 문서 별 토픽 확률값 출력하기 : posterior(lda)$topics
 # 4. 단어 별 토픽 확률값 출력하기 : posterior(lda)$terms
-
-# Q1 : topic이 내가 원하는 주제로 나누어지는가?
-# Q2 : tf-idf의 경우 단어의 무리들을 통해 레이블을 추측한다.
-#      but, lda의 경우 단어 1개가 토픽 1, 2, 3일경우 확률을 나타내준다.
-#      그렇다면 랜덤포레스트를 돌릴때 독립변수로 단어를 1개만 집어넣어야 하는가?
