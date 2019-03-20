@@ -130,7 +130,8 @@ id_topic_doosan <- merge(topic_doosan_df, doc_prob_doosan_df, by = "row")
 label_df <- factor(c(rep("1", 7000), rep("2", 7000), rep("3", NROW(doc_prob_doosan_df) - 14000)))
 doc_prob_doosan_df$label <- label_df
 
-colnames(doc_prob_doosan_df)[1 : 10] <- paste0("topic", colnames(doc_prob_doosan_df)[1 : 10])
+colnames(doc_prob_doosan_df)[11 : 20] <- paste0("topic", colnames(doc_prob_doosan_df)[11 : 20])
+doc_prob_doosan_df$row <- NULL
 
 # train / test로 나누기 - 70% / 30%
 set.seed(1337)
@@ -151,7 +152,20 @@ plot(rf_lda_train)
 varImpPlot(rf_lda_train)
 
 rf_lda_pred <- predict(rf_lda_train, newdata = lda_test, type = "class")
-confusionMatrix(rf_lda_pred, lda_test$label) # topic 10개 - Accuracy : 0.9693 topic 20개 - ?
+confusionMatrix(rf_lda_pred, lda_test$label) # topic 10개 - Accuracy : 0.9693 
+                                             # topic 20개 - Accuracy : 0.9636
+                                             # topic 갯수는 관련이 없는걸수도
+
+# 분류 변수를 늘려보자 / topic이 20개일때 Split Variable number 4 -> 10
+rf_lda_train <- randomForest(label ~ ., lda_train, importance = T, do.trace = T, ntree = 200, mtry = 10)
+
+print(rf_lda_train)
+
+rf_lda_pred_train <- predict(rf_lda_train, newdata = lda_train, type = "class")
+confusionMatrix(rf_lda_pred_train, lda_train$label) # topic 20개, train - Accuracy : 0.9936
+
+rf_lda_pred <- predict(rf_lda_train, newdata = lda_test, type = "class")
+confusionMatrix(rf_lda_pred, lda_test$label) # Accuracy : 0.9634
 
 # LDA Output 4가지 종류
 # 1. 토픽 별 핵심 단어 출력하기   : terms(lda, 30)
