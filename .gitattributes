@@ -2,3 +2,10 @@ digital_daily.csv filter=lfs diff=lfs merge=lfs -text
 Digital_Daily.csv filter=lfs diff=lfs merge=lfs -text
 Digital_Daily_NLP4kec.csv filter=lfs diff=lfs merge=lfs -text
 Digital_Daily_NLP4kec_rmNA.csv filter=lfs diff=lfs merge=lfs -text
+Dictionary_Animal_utf.csv filter=lfs diff=lfs merge=lfs -text
+Dictionary_DescriptiveScience_utf.csv filter=lfs diff=lfs merge=lfs -text
+Dictionary_PureScience_utf.csv filter=lfs diff=lfs merge=lfs -text
+Dictionary_SocialScience_utf.csv filter=lfs diff=lfs merge=lfs -text
+Dictionary_Religion_utf.csv filter=lfs diff=lfs merge=lfs -text
+Dictionary_Travel_utf.csv filter=lfs diff=lfs merge=lfs -text
+Dictionary_Sport_utf.csv filter=lfs diff=lfs merge=lfs -text
