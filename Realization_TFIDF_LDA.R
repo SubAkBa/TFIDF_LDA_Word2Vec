@@ -59,16 +59,18 @@ topic_data$label <- as.factor(labels)
 labels <- c(rep("0", 6500), rep("1", 6500), rep("2", 6500), rep("3", nrow(tfidf_df_data) - 19500))
 tfidf_df_data$label <- as.factor(labels)
 
-# 8. Divide Train & Test - 70% & 30%
-tfidf_idx <- createDataPartition(tfidf_df_data$label, p = 0.7)$Resample1
+# 8. Divide Train & Test - 50% & 50%
+tfidf_idx <- createDataPartition(tfidf_df_data$label, p = 0.5)$Resample1
 tfidf_train <- tfidf_df_data[tfidf_idx, ]
 tfidf_test <- tfidf_df_data[-tfidf_idx, ]
 
-lda_idx <- createDataPartition(topic_data$label, p = 0.7)$Resample1
+lda_idx <- createDataPartition(topic_data$label, p = 0.5)$Resample1
 lda_train <- topic_data[lda_idx, ]
 lda_test <- topic_data[-lda_idx, ]
 
-# 9. TF-IDF Model (RandomForest)
+# Learning Method - Labeling Data rate : 50%
+# 9. Supervised Learning
+# 9-1. TF-IDF (RandomForest)
 tfidf_rf_model <- randomForest(label ~ ., data = tfidf_train, do.trace = T, importance = T, ntree = 400)
 tfidf_pred <- as.data.frame(predict(tfidf_rf_model, newdata = tfidf_test, type = "prob"))
 tfidf_pred$maxprob <- apply(tfidf_pred, 1, max)
@@ -76,7 +78,7 @@ tfidf_pred$label <- predict(tfidf_rf_model, newdata = tfidf_test, type = "class"
 
 confusionMatrix(tfidf_pred$label, tfidf_test$label) # Accuracy : 0.6892
 
-# 10. LDA Model (RandomForest)
+# 9-2. LDA (RandomForest)
 lda_rf_model <- randomForest(label ~ ., data = lda_train, do.trace = T, importance = T, ntree = 400)
 lda_pred <- as.data.frame(predict(lda_rf_model, newdata = lda_test, type = "prob"))
 lda_pred$maxprob <- apply(lda_pred, 1, max)
@@ -86,13 +88,51 @@ confusionMatrix(lda_pred$label, lda_test$label) # Accuracy : 0.6642
 
 tfidf_pred_cut <- tfidf_pred[1 : nrow(lda_pred), ]
 
+# 10. Self-Training
+# 10-1. TF-IDF
+for(i in 1 : nrow(tfidf_test)){
+  tfidf_rf_model <- randomForest(label ~ ., data = tfidf_train, importance = T, ntree = 250)
+  tfidf_pred <- predict(tfidf_rf_model, newdata = tfidf_test[i, ], type = "class")
+  tfidf_result <- tfidf_test[i, ]
+  tfidf_result$label <- tfidf_pred
+  tfidf_train <- rbind(tfidf_train, tfidf_result)
+}
+
+# 10-2. LDA
+for(i in 1 : nrow(lda_test)){
+  lda_rf_model <- randomForest(label ~ ., data = lda_train, importance = T, ntree = 250)
+  lda_pred <- predict(lda_rf_model, newdata = lda_test[i, ], type = "class")
+  lda_result <- lda_test[i, ]
+  lda_result$label <- lda_pred
+  lda_train <- rbind(lda_train, lda_result)
+}
+
 # 11. Co-Training
-model <- ifelse(lda_pred$maxprob > tfidf_pred_cut$maxprob, "LDA", 
-                ifelse(lda_pred$maxprob == tfidf_pred_cut$maxprob, "Equal", "TF-IDF"))
-maxprob <- ifelse(lda_pred$maxprob > tfidf_pred_cut$maxprob, lda_pred$maxprob, tfidf_pred_cut$maxprob)
-theotherprob <- ifelse(lda_pred$maxprob > tfidf_pred_cut$maxprob, tfidf_pred_cut$maxprob, lda_pred$maxprob)
-label <- ifelse(lda_pred$maxprob > tfidf_pred_cut$maxprob, lda_pred$label, tfidf_pred_cut$label)
-result <- data.frame(model, maxprob, theotherprob, label)
+for(i in 1 : nrow(tfidf_test)){
+  tfidf_rf_model <- randomForest(label ~ ., data = tfidf_train, importance = T, ntree = 250)
+  lda_rf_model <- randomForest(label ~ ., data = lda_train, importance = T, ntree = 250)
+  
+  tfidf_pred <- as.data.frame(predict(tfidf_rf_model, newdata = tfidf_test, type = "prob"))
+  tfidf_pred$maxprob <- apply(tfidf_pred, 1, max)
+  tfidf_pred$label <- predict(tfidf_rf_model, newdata = tfidf_test, type = "class")
+  
+  lda_pred <- as.data.frame(predict(lda_rf_model, newdata = lda_test, type = "prob"))
+  lda_pred$maxprob <- apply(lda_pred, 1, max)
+  lda_pred$label <- predict(lda_rf_model, newdata = lda_test, type = "class")
+  
+  pred_label <- ifelse(lda_pred$maxprob > tfidf_pred$maxprob, lda_pred$label, tfidf_pred$label)
+  
+  tfidf_result <- tfidf_test[i, ]
+  tfidf_result$label <- pred_label
+  tfidf_train <- rbind(tfidf_train, tfidf_result)
+  
+  lda_result <- lda_test[i, ]
+  lda_result$label <- pred_label
+  lda_train <- rbind(lda_train, lda_result)
+}
+
+confusionMatrix(tfidf_df_data$label, tfidf_train$label)
+confusionMatrix(lda_train$label, topic_data$label)
 
 # 12. Using Another Data
 descsci <- fread("Dictionary_DescriptiveScience_utf.csv", data.table = F, stringsAsFactors = F) # 12405
